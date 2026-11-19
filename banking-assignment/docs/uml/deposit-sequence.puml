@@ -1,0 +1,38 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+actor Customer
+boundary AccountView
+control AccountController
+control BankingService
+entity AccountDao
+entity Account
+entity TransactionDao
+database SQLite
+
+Customer -> AccountView : choose account and enter amount
+AccountView -> AccountController : deposit(account, amount, reference)
+AccountController -> BankingService : deposit(customerId, account, amount, reference)
+BankingService -> SQLite : BEGIN transaction
+BankingService -> AccountDao : findByNumber(connection, account)
+AccountDao -> SQLite : SELECT account
+SQLite --> AccountDao : account row
+AccountDao --> BankingService : Account
+alt positive amount and customer owns account
+  BankingService -> Account : deposit(amount, reference)
+  Account --> BankingService : updated balance
+  BankingService -> AccountDao : update(connection, Account)
+  AccountDao -> SQLite : UPDATE accounts balance
+  BankingService -> TransactionDao : insert(DEPOSIT, amount, balance)
+  TransactionDao -> SQLite : INSERT transaction row
+  BankingService -> SQLite : COMMIT
+  BankingService --> AccountController : new balance
+  AccountController --> AccountView : success
+  AccountView --> Customer : refresh balance and history
+else invalid amount or ownership
+  BankingService -> SQLite : ROLLBACK
+  BankingService --> AccountController : validation error
+  AccountController --> AccountView : validation error
+  AccountView --> Customer : show error alert
+end
+@enduml
