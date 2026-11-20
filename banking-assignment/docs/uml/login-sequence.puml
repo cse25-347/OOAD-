@@ -1,0 +1,27 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+actor Customer
+boundary LoginView
+control LoginController
+control BankingService
+entity CustomerDao
+database SQLite
+
+Customer -> LoginView : enter email and password
+LoginView -> LoginController : login(email, password)
+LoginController -> BankingService : login(email, password)
+BankingService -> CustomerDao : findByEmail(connection, email)
+CustomerDao -> SQLite : SELECT customer by email
+SQLite --> CustomerDao : customer row / empty
+CustomerDao --> BankingService : Customer / empty
+alt customer exists and password hash verifies
+  BankingService --> LoginController : Customer
+  LoginController --> LoginView : Customer
+  LoginView --> Customer : show account dashboard
+else unknown email or bad password
+  BankingService --> LoginController : validation error
+  LoginController --> LoginView : validation error
+  LoginView --> Customer : show error alert
+end
+@enduml
